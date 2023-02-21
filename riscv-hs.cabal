@@ -17,7 +17,10 @@ common warnings
 executable riscv-hs
     import:           warnings
     main-is:          Main.hs
-    -- other-modules:
+    other-modules:    Cpu
+                    , Memory
+                    , Instruction
+                    , Util
     -- other-extensions:
     build-depends:    base ^>=4.14.3.0
                     , containers
