@@ -1,10 +1,18 @@
 module Instruction where
 
-type Regcode = Integer
-type Imm = Integer
-type InsBody = Integer
+import Data.Int
+import Data.Bits
+import Util
 
-data Instruction = Instruction Opcode InsBody
+type Regcode = Int
+type Imm = Int
+type InsBody = Int
+
+type RegDest = Regcode
+type RegSrc1 = Regcode
+type RegSrc2 = Regcode
+
+-- data Instruction = Instruction Opcode InsBody
   -- = InsTypeR -- register-register
   -- | InsTypeI -- register-immediate, loads, JALR, SYSTEM
   -- | InsTypeS -- stores
@@ -12,18 +20,62 @@ data Instruction = Instruction Opcode InsBody
   -- | InsTypeB -- conditional branch
   -- | InsTypeJ -- unconditional jump except JALR (I)
 
-data Opcode
-  = OpcodeLUI
-  | OpcodeAUIPC
-  | OpcodeJAL
-  | OpcodeJALR
-  | OpcodeB
-  | OpcodeL
-  | OpcodeS
-  | OpcodeRI
-  | OpcodeRR
-  | OpcodeFENCE
-  | OpcodeSYSTEM
+data Instruction
+  = InstructionLUI { rd::Regcode, imm::Int }
+  | InstructionAUIPC { rd::Regcode, imm::Int }
+  | InstructionJAL { rd::Regcode, imm::Int }
+  | InstructionJALR { funct3::Int, rd::Regcode, rs1::Regcode, imm::Int }
+  | InstructionBRANCH { funct3::Int, rs1::Regcode, rs2::Regcode, imm::Int }
+  | InstructionLOAD { funct3::Int, rd::Regcode, rs1::Regcode, imm::Int }
+  | InstructionSTORE { funct3::Int, rs1::Regcode, rs2::Regcode, imm::Int }
+  | InstructionOP_IMM { funct3::Int, rd::Regcode, rs1::Regcode, imm::Int }
+  | InstructionOP_RR { funct7::Int, funct3::Int, rd::Regcode, rs1::Regcode, rs2::Regcode }
+  | InstructionMISC_MEM { fm::Int, funct3::Int, rd::Regcode, rs1::Regcode,
+                          pi::Int, po::Int, pr::Int, pw::Int,
+                          si::Int, so::Int, sr::Int, sw::Int }
+  | InstructionSYSTEM { funct12::Int, funct3::Int, rd::Regcode, rs1::Regcode }
+
+
+getRd :: Int -> Int
+getRd = bitsI 11 7
+
+getRs1 :: Int -> Int
+getRs1 = bitsI 19 15
+
+getRs2 :: Int -> Int
+getRs2 = bitsI 24 20
+
+getIImm i =
+  sign 12
+  $ bitsI 31 20 i
+
+getSImm i =
+  sign 12
+  $ shiftL (bitsI 31 25 i) 5
+  .|. bitsI 11 7 i
+
+getBImm i =
+  sign 13
+  $ shiftL (bitI 31 i) 12
+  .|. shiftL (bitI 7 i) 11
+  .|. shiftL (bitsI 30 25 i) 5
+  .|. shiftL (bitsI 11 8 i) 1
+
+getUImm i =
+  sign 32
+  $ shiftL (bitsI 31 12 i) 12
+
+getJImm i =
+  sign 21
+  $ shiftL (bitI 31 i) 20
+  .|.shiftL (bitsI 19 12 i) 12
+  .|.shiftL (bitI 20 i) 11
+  .|.shiftL (bitsI 30 25 i) 5
+  .|.shiftL (bitsI 24 21 i) 1
+
+getFn3 :: Int -> Int
+getFn3 = bitsI 14 12
+
 
 -- OCRed from the pdf lol
 -- 0110111 LUI
