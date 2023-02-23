@@ -4,13 +4,7 @@ import Data.Int
 import Data.Bits
 import Util
 
-type Regcode = Int
-type Imm = Int
-type InsBody = Int
-
-type RegDest = Regcode
-type RegSrc1 = Regcode
-type RegSrc2 = Regcode
+type Regcode = Int32
 
 -- data Instruction = Instruction Opcode InsBody
   -- = InsTypeR -- register-register
@@ -21,39 +15,41 @@ type RegSrc2 = Regcode
   -- | InsTypeJ -- unconditional jump except JALR (I)
 
 data Instruction
-  = InstructionLUI { rd::Regcode, imm::Int }
-  | InstructionAUIPC { rd::Regcode, imm::Int }
-  | InstructionJAL { rd::Regcode, imm::Int }
-  | InstructionJALR { funct3::Int, rd::Regcode, rs1::Regcode, imm::Int }
-  | InstructionBRANCH { funct3::Int, rs1::Regcode, rs2::Regcode, imm::Int }
-  | InstructionLOAD { funct3::Int, rd::Regcode, rs1::Regcode, imm::Int }
-  | InstructionSTORE { funct3::Int, rs1::Regcode, rs2::Regcode, imm::Int }
-  | InstructionOP_IMM { funct3::Int, rd::Regcode, rs1::Regcode, imm::Int }
-  | InstructionOP_RR { funct7::Int, funct3::Int, rd::Regcode, rs1::Regcode, rs2::Regcode }
-  | InstructionMISC_MEM { fm::Int, funct3::Int, rd::Regcode, rs1::Regcode,
-                          pi::Int, po::Int, pr::Int, pw::Int,
-                          si::Int, so::Int, sr::Int, sw::Int }
-  | InstructionSYSTEM { funct12::Int, funct3::Int, rd::Regcode, rs1::Regcode }
+  = OpLUI { rd::Regcode, imm::Int32 }
+  | OpAUIPC { rd::Regcode, imm::Int32 }
+  | OpJAL { rd::Regcode, imm::Int32 }
+  | OpJALR { fn3::Int32, rd::Regcode, rs1::Regcode, imm::Int32 }
+  | OpBRANCH { fn3::Int32, rs1::Regcode, rs2::Regcode, imm::Int32 }
+  | OpLOAD { fn3::Int32, rd::Regcode, rs1::Regcode, imm::Int32 }
+  | OpSTORE { fn3::Int32, rs1::Regcode, rs2::Regcode, imm::Int32 }
+  | OpOP_IMM { fn3::Int32, rd::Regcode, rs1::Regcode, imm::Int32 }
+  | OpOP_RR { fn7::Int32, fn3::Int32, rd::Regcode, rs1::Regcode, rs2::Regcode }
+  | OpMISC_MEM { fm::Int32, fn3::Int32, rd::Regcode, rs1::Regcode,
+                          pred::Int32, succ::Int32 }
+  | OpSYSTEM { fn12::Int32, fn3::Int32, rd::Regcode, rs1::Regcode }
 
 
-getRd :: Int -> Int
+getRd :: (Num a, Bits a) => a -> a
 getRd = bitsI 11 7
 
-getRs1 :: Int -> Int
+getRs1 :: (Num a, Bits a) => a -> a
 getRs1 = bitsI 19 15
 
-getRs2 :: Int -> Int
+getRs2 :: (Num a, Bits a) => a -> a
 getRs2 = bitsI 24 20
 
+getIImm :: (Bits a, Num a) => a -> a
 getIImm i =
   sign 12
   $ bitsI 31 20 i
 
+getSImm :: (Bits a, Num a) => a -> a
 getSImm i =
   sign 12
   $ shiftL (bitsI 31 25 i) 5
   .|. bitsI 11 7 i
 
+getBImm :: (Bits a, Num a) => a -> a
 getBImm i =
   sign 13
   $ shiftL (bitI 31 i) 12
@@ -61,10 +57,12 @@ getBImm i =
   .|. shiftL (bitsI 30 25 i) 5
   .|. shiftL (bitsI 11 8 i) 1
 
+getUImm :: (Bits a, Num a) => a -> a
 getUImm i =
   sign 32
   $ shiftL (bitsI 31 12 i) 12
 
+getJImm :: (Bits a, Num a) => a -> a
 getJImm i =
   sign 21
   $ shiftL (bitI 31 i) 20
@@ -73,7 +71,7 @@ getJImm i =
   .|.shiftL (bitsI 30 25 i) 5
   .|.shiftL (bitsI 24 21 i) 1
 
-getFn3 :: Int -> Int
+getFn3 :: (Bits a, Num a) => a -> a
 getFn3 = bitsI 14 12
 
 

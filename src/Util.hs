@@ -1,6 +1,7 @@
 module Util where
 
 import Data.Bits
+import qualified Data.Vector as V
 
 mask :: (Num a, Bits a) => Int -> a
 mask n = shiftL 1 n - 1
@@ -24,3 +25,6 @@ sign b n =
   if testBit n (b - 1)
   then negate $ mask b .&. (complement n) + 1
   else n
+
+-- vecset :: (Vector v a) => v a -> Int -> a -> v a
+vecset v i val = V.update v (V.singleton (i, val))
