@@ -19,15 +19,52 @@ I was going to just give instructions on testing, but gave up halfway through an
    - optionally `make run` for asm dump files
 7. `cp *.bin ../../riscv-hs/test/isa/` 
 
-todo i might delete this
+
+todo i might delete this bunch of tests
 
 you may have to:
 - Modify rv32ui/Makefrag to comment out `rv32ui_v_tests` (for now. virtual memory tests)
 - base address is 0x80000000 (this isn't encoded in the raw bin)
 
+### success/failure (todo)
 
+Results are not compared against a reference implementation; Spike (the official emulator downloaded above) does not have an option to print machine state at the end of execution. It has a per-instruction logging feature, but producing and comparing equal logs would probably be more work than writing emulator itself.
+
+Instead, the included tests are designed to evaluate the emulator they're running on. A bit of code is necessary to deal with this.
+
+Success and failure are defined by the following macros, and the emulator (or test harness) should react appropriately. 
+```
+//-----------------------------------------------------------------------
+// End Macro
+//-----------------------------------------------------------------------
+
+#define RVTEST_CODE_END                                                 \
+        unimp
+
+//-----------------------------------------------------------------------
+// Pass/Fail Macro
+//-----------------------------------------------------------------------
+
+#define RVTEST_PASS                                                     \
+        fence;                                                          \
+        li TESTNUM, 1;                                                  \
+        li a7, 93;                                                      \
+        li a0, 0;                                                       \
+        ecall
+
+#define TESTNUM gp
+#define RVTEST_FAIL                                                     \
+        fence;                                                          \
+1:      beqz TESTNUM, 1b;                                               \
+        sll TESTNUM, TESTNUM, 1;                                        \
+        or TESTNUM, TESTNUM, 1;                                         \
+        li a7, 93;                                                      \
+        addi a0, TESTNUM, 0;                                            \
+        ecall
+```
+
+### makefile
 ``` Makefile
-
 #=======================================================================
 # Makefile for riscv-tests/isa
 #-----------------------------------------------------------------------
