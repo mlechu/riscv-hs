@@ -1,18 +1,11 @@
 module Instruction where
 
 import Data.Int
+import Data.Word
 import Data.Bits
 import Util
 
 type Regcode = Int32
-
--- data Instruction = Instruction Opcode InsBody
-  -- = InsTypeR -- register-register
-  -- | InsTypeI -- register-immediate, loads, JALR, SYSTEM
-  -- | InsTypeS -- stores
-  -- | InsTypeU -- LUI, AUIPC
-  -- | InsTypeB -- conditional branch
-  -- | InsTypeJ -- unconditional jump except JALR (I)
 
 data Instruction
   = OpLUI { rd::Regcode, imm::Int32 }
@@ -25,31 +18,36 @@ data Instruction
   | OpOP_IMM { fn3::Int32, rd::Regcode, rs1::Regcode, imm::Int32 }
   | OpOP_RR { fn7::Int32, fn3::Int32, rd::Regcode, rs1::Regcode, rs2::Regcode }
   | OpMISC_MEM { fm::Int32, fn3::Int32, rd::Regcode, rs1::Regcode,
-                          pred::Int32, succ::Int32 }
+                          pred4::Int32, succ4::Int32 }
   | OpSYSTEM { fn12::Int32, fn3::Int32, rd::Regcode, rs1::Regcode }
+  | OpUNIMP { ins::Word32 }
+  deriving (Show)
 
 
-getRd :: (Num a, Bits a) => a -> a
+-- data InstructionComponent
+  -- = InsRd | InsRs1 | InsRs2 | InsImmI | InsImmS | InsImmB | InsImmU | InsImmJ | InsFn3
+
+getRd :: (Integral a, Bits a, Integral b, Bits b) => a -> b
 getRd = bitsI 11 7
 
-getRs1 :: (Num a, Bits a) => a -> a
+getRs1 :: (Integral a, Bits a, Integral b, Bits b) => a -> b
 getRs1 = bitsI 19 15
 
-getRs2 :: (Num a, Bits a) => a -> a
+getRs2 :: (Integral a, Bits a, Integral b, Bits b) => a -> b
 getRs2 = bitsI 24 20
 
-getIImm :: (Bits a, Num a) => a -> a
+getIImm :: (Integral a, Bits a, Integral b, Bits b) => a -> b
 getIImm i =
   sign 12
   $ bitsI 31 20 i
 
-getSImm :: (Bits a, Num a) => a -> a
+getSImm :: (Integral a, Bits a, Integral b, Bits b) => a -> b
 getSImm i =
   sign 12
   $ shiftL (bitsI 31 25 i) 5
   .|. bitsI 11 7 i
 
-getBImm :: (Bits a, Num a) => a -> a
+getBImm :: (Integral a, Bits a, Integral b, Bits b) => a -> b
 getBImm i =
   sign 13
   $ shiftL (bitI 31 i) 12
@@ -57,12 +55,12 @@ getBImm i =
   .|. shiftL (bitsI 30 25 i) 5
   .|. shiftL (bitsI 11 8 i) 1
 
-getUImm :: (Bits a, Num a) => a -> a
+getUImm :: (Integral a, Bits a, Integral b, Bits b) => a -> b
 getUImm i =
   sign 32
   $ shiftL (bitsI 31 12 i) 12
 
-getJImm :: (Bits a, Num a) => a -> a
+getJImm :: (Integral a, Bits a, Integral b, Bits b) => a -> b
 getJImm i =
   sign 21
   $ shiftL (bitI 31 i) 20
@@ -71,7 +69,7 @@ getJImm i =
   .|.shiftL (bitsI 30 25 i) 5
   .|.shiftL (bitsI 24 21 i) 1
 
-getFn3 :: (Bits a, Num a) => a -> a
+getFn3 :: (Integral a, Bits a, Integral b, Bits b) => a -> b
 getFn3 = bitsI 14 12
 
 

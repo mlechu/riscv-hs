@@ -1,24 +1,37 @@
 module Main where
 
-import Memory
 import Cpu
-
+import Memory
 
 main :: IO ()
 main = do
-  let mem = Memory.make [
-        (00, 0x9302c003), --  li       t0,0x3c
-        (04, 0x13030000), --  mv       t1,zero
-        (08, 0x13035300), --  addi     t1,t1,0x5
-        (12, 0x9382f2ff), --  addi     t0,t0,-0x1
-        (16, 0xe31c53fe), --  bne      t1,t0,LAB_00000008
-        (20, 0x63180300), --  bne      t1,zero,LAB_00000024
-        (24, 0x13050000), --  mv       a0,zero
-        (28, 0x9308d005), --  li       a7,0x5d
-        (32, 0x73000000), --  ecall
-        (36, 0x1305a002), --  li       a0,0x2a
-        (40, 0x9308d005), --  li       a7,0x5d
-        (44, 0x73000000)  --  ecall
-        ]
+  let mem =
+        Memory.make
+          [ (00, 0xff010113) -- addi  sp,sp,-16
+          , (04, 0x00112623) --  sw  ra,12(sp)
+          , (08, 0x00812423) --  sw  s0,8(sp)
+          , (12, 0x01010413) --  addi  s0,sp,16
+          , (16, 0xfea42a23) --  sw  a0,-12(s0)
+          , (20, 0xff442503) --  lw  a0,-12(s0)
+          , (24, 0xff442503) --(24, 0x02a50533) --  mul  a0,a0,a0
+          , (28, 0x00c12083) --  lw  ra,12(sp)
+          , (32, 0x00812403) --  lw  s0,8(sp)
+          , (36, 0x01010113) --  addi  sp,sp,16
+          -- , (40, 0x00008067) --  ret
+          ]
       cpu = initCpu
   printExecution cpu mem
+
+-- -- calls the other
+-- (44, ff010113), -- addi   sp,sp,-16
+-- (48, 00112623), -- sw   ra,12(sp)
+-- (52, 00812423), -- sw   s0,8(sp)
+-- (56, 01010413), -- addi   s0,sp,16
+-- (60, fea42a23), -- sw   a0,-12(s0)
+-- (64, ff442503), -- lw   a0,-12(s0)
+-- (68, 00000097), -- auip   ra,0x0
+-- (72, 000080e7), -- jalr   ra # 44 <a+0x18>
+-- (76, 00c12083), -- lw   ra,12(sp)
+-- (80, 00812403), -- lw   s0,8(sp)
+-- (84, 01010113), -- addi   sp,sp,16
+-- (88, 00008067), -- ret

@@ -8,7 +8,7 @@ author:             Adam Mitha, Em Chu
 -- maintainer:
 -- copyright:
 build-type:         Simple
-extra-doc-files:    CHANGELOG.md
+-- extra-doc-files:    CHANGELOG.md
 -- extra-source-files:
 
 common warnings
@@ -18,12 +18,14 @@ executable riscv-hs
     import:           warnings
     main-is:          Main.hs
     other-modules:    Cpu
-                      , Memory
-                      , Instruction
-                      , Util
-    -- other-extensions:
+                    , Memory
+                    , Instruction
+                    , Util
     build-depends:    base ^>=4.14.3.0
+                    , ghc
                     , containers
+                    , binary
+                    , bytestring
                     , vector
     hs-source-dirs:   src
     default-language: Haskell2010
@@ -33,7 +35,7 @@ test-suite simple
     type:             exitcode-stdio-1.0
     main-is:          SimpleTest.hs
     hs-source-dirs:   test
-    other-modules:    Cpu
+    -- other-modules:    Cpu
     --                 , Memory
     --                 , Instruction
     --                 , Util
