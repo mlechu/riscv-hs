@@ -1,8 +1,12 @@
 module Main where
 
 import Cpu
+import Data.List.Split
+import qualified Data.Binary.Get as B
+import qualified Data.ByteString.Lazy as DL
 import Memory
 import System.Exit
+import System.Directory
 
 main = do
   testLoop
@@ -23,4 +27,16 @@ testLoop = do
             -- , (40, 0x00008067) --  ret
           ]
       cpu = initCpu
-  printExecution cpu mem
+  mem2 <- loadTest "test/bins/square.bin"
+  printExecution cpu mem2
+
+loadTest :: FilePath -> IO Memory
+loadTest test = do
+  bin <- DL.readFile test
+  return (Memory.make (Prelude.zip [0 .. 24] (Prelude.map word32FromChars (chunkBs 4 bin))))
+
+chunkBs n bs
+  | DL.null bs = []
+  | otherwise = DL.take n bs : chunkBs n (DL.drop n bs)
+
+word32FromChars = B.runGet B.getWord32le
