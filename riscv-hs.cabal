@@ -21,7 +21,7 @@ executable riscv-hs
                     , Memory
                     , Instruction
                     , Util
-    build-depends:    base ^>=4.14.3.0
+    build-depends:    base ^>=4.16.2
                     , ghc
                     , containers
                     , binary
@@ -34,14 +34,15 @@ executable riscv-hs
 test-suite simple
     type:             exitcode-stdio-1.0
     main-is:          SimpleTest.hs
-    hs-source-dirs:   test
-    -- other-modules:    Cpu
-    --                 , Memory
-    --                 , Instruction
-    --                 , Util
+    hs-source-dirs:   test src
+    other-modules:    Cpu
+                    , Memory
+                    , Instruction
+                    , Util
     build-depends:    base
-                    , riscv-hs
-                    , containers,
+--                     , riscv-hs
+                    , containers
+                    , vector
     default-language: Haskell2010
 
     -- default-language: Haskell2010
