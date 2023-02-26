@@ -5,17 +5,17 @@ import Data.Word
 import Data.Bits
 import Util
 
-type Regcode = Int32
+type Regcode = Int
 
 data Instruction
-  = OpLUI { rd::Regcode, imm::Int32 }
-  | OpAUIPC { rd::Regcode, imm::Int32 }
-  | OpJAL { rd::Regcode, imm::Int32 }
-  | OpJALR { fn3::Int32, rd::Regcode, rs1::Regcode, imm::Int32 }
-  | OpBRANCH { fn3::Int32, rs1::Regcode, rs2::Regcode, imm::Int32 }
-  | OpLOAD { fn3::Int32, rd::Regcode, rs1::Regcode, imm::Int32 }
-  | OpSTORE { fn3::Int32, rs1::Regcode, rs2::Regcode, imm::Int32 }
-  | OpOP_IMM { fn3::Int32, rd::Regcode, rs1::Regcode, imm::Int32 }
+  = OpLUI { rd::Regcode, imm::Word32 }
+  | OpAUIPC { rd::Regcode, imm::Word32 }
+  | OpJAL { rd::Regcode, imm::Word32 }
+  | OpJALR { fn3::Int32, rd::Regcode, rs1::Regcode, imm::Word32 }
+  | OpBRANCH { fn3::Int32, rs1::Regcode, rs2::Regcode, imm::Word32 }
+  | OpLOAD { fn3::Int32, rd::Regcode, rs1::Regcode, imm::Word32 }
+  | OpSTORE { fn3::Int32, rs1::Regcode, rs2::Regcode, imm::Word32 }
+  | OpOP_IMM { fn3::Int32, rd::Regcode, rs1::Regcode, imm::Word32 }
   | OpOP_RR { fn7::Int32, fn3::Int32, rd::Regcode, rs1::Regcode, rs2::Regcode }
   | OpMISC_MEM { fm::Int32, fn3::Int32, rd::Regcode, rs1::Regcode,
                           pred4::Int32, succ4::Int32 }
@@ -38,18 +38,18 @@ getRs2 = bitsI 24 20
 
 getIImm :: (Integral a, Bits a, Integral b, Bits b) => a -> b
 getIImm i =
-  sign 12
+  signExt 12
   $ bitsI 31 20 i
 
 getSImm :: (Integral a, Bits a, Integral b, Bits b) => a -> b
 getSImm i =
-  sign 12
+  signExt 12
   $ shiftL (bitsI 31 25 i) 5
   .|. bitsI 11 7 i
 
 getBImm :: (Integral a, Bits a, Integral b, Bits b) => a -> b
 getBImm i =
-  sign 13
+  signExt 13
   $ shiftL (bitI 31 i) 12
   .|. shiftL (bitI 7 i) 11
   .|. shiftL (bitsI 30 25 i) 5
@@ -57,12 +57,12 @@ getBImm i =
 
 getUImm :: (Integral a, Bits a, Integral b, Bits b) => a -> b
 getUImm i =
-  sign 32
+  signExt 32
   $ shiftL (bitsI 31 12 i) 12
 
 getJImm :: (Integral a, Bits a, Integral b, Bits b) => a -> b
 getJImm i =
-  sign 21
+  signExt 21
   $ shiftL (bitI 31 i) 20
   .|.shiftL (bitsI 19 12 i) 12
   .|.shiftL (bitI 20 i) 11

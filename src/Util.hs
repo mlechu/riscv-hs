@@ -24,11 +24,10 @@ bitI n = bitsI n n
 
 -- interpret n as a b-bit signed integer
 -- b is always less than 32
-sign :: (Bits a, Integral a) => Int -> a -> a
-sign b n =
-  mask b
-    .&. if testBit n (b - 1)
-      then negate $ mask b .&. (complement n) + 1
+signExt :: (Bits a, Integral a) => Int -> a -> a
+signExt b n =
+   if testBit n (b - 1)
+      then complement (mask b) .|. n
       else n
 
 -- vecset :: (V.Vector v a) => v a -> Int -> a -> v a

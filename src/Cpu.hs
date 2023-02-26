@@ -10,8 +10,9 @@ import Instruction
 import Memory
 import Numeric (showHex)
 import Util
+import Debug.Trace
 
-type Register = Int32
+type Register = MemWord
 
 data State = State
   { pc :: Register,
@@ -27,12 +28,12 @@ regset s i v =
     { regs =
         V.update
           (regs s)
-          (V.singleton (fromIntegral i, v))
+          (V.singleton (i, v))
     }
 
 regget :: State -> Regcode -> Register
 regget _ 0 = 0
-regget s i = regs s V.! fromIntegral i
+regget s i = regs s V.! i
 
 instance Show State where
   show (State pc' regs' _) =
@@ -111,68 +112,93 @@ execute s _ (OpJAL rd imm) =
 execute s m (OpJALR fn3 rd rs1 imm) =
   regset s rd (pc s + 4)
 execute s m (OpBRANCH fn3 rs1 rs2 imm) =
-  case fn3 of
-    0b000 -> s -- BEQ
-    0b001 -> s -- BNE
-    0b100 -> s -- BLT
-    0b101 -> s -- BGE
-    0b110 -> s -- BLTU
-    0b111 -> s -- BGEU
-    _ -> error "not implemented"
+  s
 execute s m (OpLOAD fn3 rd rs1 imm) =
+  let offset = toUnsigned32 rs1 + imm
+  in
   case fn3 of
-    0b000 -> s -- LB
-    0b001 -> s -- LH
-    0b010 -> s -- LW
-    0b100 -> s -- LBU
-    0b101 -> s -- LHU
+    0b000 -> -- LB
+      s
+    0b001 -> -- LH
+      s
+    0b010 -> -- LW
+      regset s rd $ read32 m (regget s rs1 + imm)
+    0b100 -> -- LBU
+      s
+    0b101 -> -- LHU
+      s
     _ -> error "not implemented"
 execute s m (OpSTORE fn3 rs1 rs2 imm) =
   case fn3 of
-    0b000 -> s -- SB
-    0b001 -> s -- SH
-    0b010 -> s -- SW
+    0b000 -> -- SB
+      s
+    0b001 -> -- SH
+      s
+    0b010 -> -- SW
+      s
     _ -> error "not implemented"
 execute s m (OpOP_IMM fn3 rd rs1 imm) =
   case fn3 of
-    0b000 -> s -- ADDI
-    0b010 -> s -- SLTI
-    0b011 -> s -- SLTIU
-    0b100 -> s -- XORI
-    0b110 -> s -- ORI
-    0b111 -> s -- ANDI
-    0b001 -> s -- SLLI
+    0b000 -> -- ADDI
+      s
+    0b010 -> -- SLTI
+      s
+    0b011 -> -- SLTIU
+      s
+    0b100 -> -- XORI
+      s
+    0b110 -> -- ORI
+      s
+    0b111 -> -- ANDI
+      s
+    0b001 -> -- SLLI
+      s
     0b101 -> case bitsI 31 25 imm of
       -- (bitsI 20 24 i) is the shamt
-      0b0000000 -> s -- SRLI c
-      0b0100000 -> s -- SRAI c
+      0b0000000 -> -- SRLI c
+        s
+      0b0100000 -> -- SRAI c
+        s
       _ -> error "not implemented"
     _ -> error "not implemented"
 execute s m (OpOP_RR fn7 fn3 rd rs1 rs2) =
   case fn3 of
     0b000 -> case fn7 of
-      0b0000000 -> s -- ADD
-      0b0100000 -> s -- SUB
+      0b0000000 -> -- ADD
+        s
+      0b0100000 -> -- SUB
+        s
       _ -> error "not implemented"
-    0b001 -> s -- SLL
-    0b010 -> s -- SLT
-    0b011 -> s -- SLTU
-    0b100 -> s -- XOR
+    0b001 -> -- SLL
+      s
+    0b010 -> -- SLT
+      s
+    0b011 -> -- SLTU
+      s
+    0b100 -> -- XOR
+      s
     0b101 -> case fn7 of
-      0b0000000 -> s -- SRL
-      0b0100000 -> s -- SRA
+      0b0000000 -> -- SRL
+        s
+      0b0100000 -> -- SRA
+        s
       _ -> error "not implemented"
-    0b110 -> s -- OR
-    0b111 -> s -- AND
+    0b110 -> -- OR
+      s
+    0b111 -> -- AND
+      s
     _ -> error "not implemented"
 execute s m (OpMISC_MEM fm fn3 rd rs1 pred succ) =
   case fn3 of
-    0b000 -> s -- FENCE
+    0b000 -> -- FENCE
+      s
     _ -> error "not implemented"
 execute s m (OpSYSTEM fn12 fn3 rd rs1) =
   case fn12 of
-    0 -> s -- ECALL
-    1 -> s -- EBREAK
+    0 -> -- ECALL
+      s
+    1 -> -- EBREAK
+      s
     _ -> error "heyy"
 execute s m (OpUNIMP i) = s
 
@@ -187,6 +213,18 @@ updatePc s (OpJAL rd imm) =
   s {pc = pc s + imm}
 updatePc s (OpJALR fn3 rd rs1 imm) =
   s {pc = regget s rs1 + imm}
+updatePc s (OpBRANCH fn3 rs1 rs2 imm) =
+  s {pc = pc s + if f (regget s rs1) (regget s rs2) then imm else 0}
+  where
+    uop = \f x y -> f (toUnsigned32 x) (toUnsigned32 y)
+    f = case fn3 of
+      0b000 -> (==) -- BEQ
+      0b001 -> (/=) -- BNE
+      0b100 -> (<) -- BLT
+      0b101 -> (>=) -- BGE
+      0b110 -> uop (<) -- BLTU
+      0b111 -> uop (>=) -- BGEU
+      _ -> error "not implemented"
 updatePc s (OpUNIMP i) =
   s {halted = True}
 updatePc s _ = s {pc = pc s + 4}
