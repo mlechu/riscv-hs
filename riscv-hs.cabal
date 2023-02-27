@@ -21,7 +21,7 @@ executable riscv-hs
                     , Memory
                     , Instruction
                     , Util
-    build-depends:    base ^>=4.16.2
+    build-depends:    base
                     , ghc
                     , containers
                     , binary

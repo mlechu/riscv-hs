@@ -197,3 +197,10 @@ clean:
 	rm -rf $(junk)
 
 ```
+
+### SimpleTest.hs
+I've dumped a couple of simple raw binaries into the test/bins directory to exercise the emulator. The SimpleTest test harness iterates through the test programs, executes them and compares the state of the registers to an expected value.
+
+The tests depend on the QuickCheck library  - `cabal install QuickCheck --lib`
+
+The tests can be run with `cabal test`
