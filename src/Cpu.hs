@@ -1,4 +1,5 @@
 {-# LANGUAGE BinaryLiterals #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module Cpu where
 
@@ -19,6 +20,13 @@ data State = State
     regs :: V.Vector Register,
     halted :: Bool
   }
+
+-- data ExecutionEnv = ExecutionEnv
+--   { xlen :: Xlen,
+--     ecalls :: Map
+--   }
+
+-- data Xlen = Xlen32 | Xlen64 | Xlen128
 
 -- modify register file. Note x0 is wired to 0, and writes are no-ops.
 regset :: State -> Regcode -> Register -> State
@@ -103,106 +111,94 @@ decodeOp i =
     0b1110011 -> OpSYSTEM (bitsI 31 20 i) (getFn3 i) (getRd i) (getRs1 i)
     _ -> OpUNIMP i
 
+slt :: (Ord a) => a -> a -> Register
+slt r1 r2 = if r1 < r2 then 1 else 0
+
 -- Decode full instruction, then execute the instruction and update registers
 execute :: State -> Memory -> Instruction -> State
 execute s _ (OpLUI rd imm) = regset s rd imm
 execute s _ (OpAUIPC rd imm) = regset s rd (pc s + imm)
-execute s _ (OpJAL rd imm) =
-  regset s rd (pc s + 4)
-execute s m (OpJALR fn3 rd rs1 imm) =
-  regset s rd (pc s + 4)
-execute s m (OpBRANCH fn3 rs1 rs2 imm) =
-  s
+execute s _ (OpJAL rd imm) = regset s rd (pc s + 4)
+execute s m (OpJALR fn3 rd rs1 imm) = regset s rd (pc s + 4)
 execute s m (OpLOAD fn3 rd rs1 imm) =
-  let offset = toUnsigned32 rs1 + imm
-  in
-  case fn3 of
-    0b000 -> -- LB
-      s
-    0b001 -> -- LH
-      s
-    0b010 -> -- LW
-      regset s rd $ read32 m (regget s rs1 + imm)
-    0b100 -> -- LBU
-      s
-    0b101 -> -- LHU
-      s
-    _ -> error "not implemented"
-execute s m (OpSTORE fn3 rs1 rs2 imm) =
-  case fn3 of
-    0b000 -> -- SB
-      s
-    0b001 -> -- SH
-      s
-    0b010 -> -- SW
-      s
-    _ -> error "not implemented"
+  regset s rd $ fromIntegral val
+  where
+    offset = regget s rs1 + imm
+    val = case fn3 of
+      0b000 -> -- LB
+        signExt 1 $ readUnaligned m (regget s rs1 + imm) 1
+      0b001 -> -- LH
+        signExt 1 $ readUnaligned m (regget s rs1 + imm) 2
+      0b010 -> -- LW
+        readUnaligned m (regget s rs1 + imm) 4
+      0b100 -> -- LBU
+        readUnaligned m (regget s rs1 + imm) 1
+      0b101 -> -- LHU
+        readUnaligned m (regget s rs1 + imm) 2
+      _ -> error "not implemented"
 execute s m (OpOP_IMM fn3 rd rs1 imm) =
-  case fn3 of
-    0b000 -> -- ADDI
-      s
-    0b010 -> -- SLTI
-      s
-    0b011 -> -- SLTIU
-      s
-    0b100 -> -- XORI
-      s
-    0b110 -> -- ORI
-      s
-    0b111 -> -- ANDI
-      s
-    0b001 -> -- SLLI
-      s
-    0b101 -> case bitsI 31 25 imm of
-      -- (bitsI 20 24 i) is the shamt
-      0b0000000 -> -- SRLI c
-        s
-      0b0100000 -> -- SRAI c
-        s
+  regset s rd $ op (regget s rs1) imm
+  where
+    op = case fn3 of
+      0b000 -> (+) -- ADDI
+      0b010 -> signedOp slt -- SLTI
+      0b011 -> slt -- SLTIU
+      0b100 -> xor -- XORI
+      0b110 -> (.|.) -- ORI
+      0b111 -> (.&.) -- ANDI
+      0b001 -> shL -- SLLI
+      0b101 ->
+        let shamt = bitsI 4 0 imm
+        in case bitsI 11 5 imm of
+          0b0000000 -> \r _ -> shRLog r shamt  -- SRLI c
+          0b0100000 -> \r _ -> shRAri r shamt -- SRAI c
+          _ -> error "not implemented"
       _ -> error "not implemented"
-    _ -> error "not implemented"
 execute s m (OpOP_RR fn7 fn3 rd rs1 rs2) =
-  case fn3 of
-    0b000 -> case fn7 of
-      0b0000000 -> -- ADD
-        s
-      0b0100000 -> -- SUB
-        s
+  regset s rd $ op (regget s rs1) (regget s rs2)
+  where
+    op = case fn3 of
+      0b000 -> case fn7 of
+        0b0000000 -> (+) -- ADD
+        0b0100000 -> (-) -- SUB
+        _ -> error "not implemented"
+      0b001 -> shL -- SLL
+      0b010 -> signedOp slt -- SLT
+      0b011 -> slt -- SLTU
+      0b100 -> xor  -- XOR
+      0b101 ->
+        let shamt = bitsI 4 0 rs2
+        in case fn7 of
+          0b0000000 -> \r1 _ -> shRLog r1 shamt -- SRL
+          0b0100000 -> \r1 _ -> shRAri r1 shamt -- SRA
+          _ -> error "not implemented"
+      0b110 -> (.|.) -- OR
+      0b111 -> (.&.) -- AND
       _ -> error "not implemented"
-    0b001 -> -- SLL
-      s
-    0b010 -> -- SLT
-      s
-    0b011 -> -- SLTU
-      s
-    0b100 -> -- XOR
-      s
-    0b101 -> case fn7 of
-      0b0000000 -> -- SRL
-        s
-      0b0100000 -> -- SRA
-        s
-      _ -> error "not implemented"
-    0b110 -> -- OR
-      s
-    0b111 -> -- AND
-      s
-    _ -> error "not implemented"
-execute s m (OpMISC_MEM fm fn3 rd rs1 pred succ) =
-  case fn3 of
-    0b000 -> -- FENCE
-      s
-    _ -> error "not implemented"
+-- execute s m (OpMISC_MEM fm fn3 rd rs1 pred succ) =
+--   s -- I don't think this needs to be implemented; only one thread!
 execute s m (OpSYSTEM fn12 fn3 rd rs1) =
   case fn12 of
     0 -> -- ECALL
       s
     1 -> -- EBREAK
       s
-    _ -> error "heyy"
-execute s m (OpUNIMP i) = s
+    _ -> error "not implemented"
+execute s m _ = s
 
 updateMemory :: State -> Memory -> Instruction -> Memory
+updateMemory s m (OpSTORE fn3 rs1 rs2 imm) =
+  let ea = regget s rs1 + imm
+      val = fromIntegral $ regget s rs2
+  in case fn3 of
+      0b000 -> -- SB
+        write8 m ea (fromIntegral $ regget s rs2)
+  -- write8 :: Memory -> Address -> Word8 -> Memory
+      0b001 -> -- SH
+        writeUnaligned m ea 2 val
+      0b010 -> -- SW
+        writeUnaligned m ea 4 val
+      _ -> error "not implemented"
 updateMemory _ m _ = m
 
 -- update program counter on jumps/branches
@@ -216,14 +212,13 @@ updatePc s (OpJALR fn3 rd rs1 imm) =
 updatePc s (OpBRANCH fn3 rs1 rs2 imm) =
   s {pc = pc s + if f (regget s rs1) (regget s rs2) then imm else 0}
   where
-    uop = \f x y -> f (toUnsigned32 x) (toUnsigned32 y)
     f = case fn3 of
       0b000 -> (==) -- BEQ
       0b001 -> (/=) -- BNE
-      0b100 -> (<) -- BLT
-      0b101 -> (>=) -- BGE
-      0b110 -> uop (<) -- BLTU
-      0b111 -> uop (>=) -- BGEU
+      0b100 -> signedOp (<) -- BLT
+      0b101 -> signedOp (>=) -- BGE
+      0b110 -> (<) -- BLTU
+      0b111 -> (>=) -- BGEU
       _ -> error "not implemented"
 updatePc s (OpUNIMP i) =
   s {halted = True}

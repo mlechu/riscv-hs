@@ -4,6 +4,7 @@ import Data.Int
 import Data.Word
 import Data.Bits
 import Util
+import Numeric (showHex)
 
 type Regcode = Int
 
@@ -22,7 +23,6 @@ data Instruction
   | OpSYSTEM { fn12::Int32, fn3::Int32, rd::Regcode, rs1::Regcode }
   | OpUNIMP { ins::Word32 }
   deriving (Show)
-
 
 -- data InstructionComponent
   -- = InsRd | InsRs1 | InsRs2 | InsImmI | InsImmS | InsImmB | InsImmU | InsImmJ | InsFn3
