@@ -1,26 +1,47 @@
 module Main where
 
+import Control.Monad
 import Cpu
 import qualified Data.Binary.Get as B
 import qualified Data.ByteString.Lazy as DL
-import Data.List.Split
 import Data.Int
+import Data.List.Split
+import qualified Data.Vector as V
 import Memory
-import System.Directory
+import Test.QuickCheck
 import System.Exit
 
 main = do
-  dirs <- listDirectory "test/bins"
-  testLoop dirs
+  let tests =
+        [ Test "test/bins/add.bin" (V.replicate 32 0),
+          Test "test/bins/add.bin" (V.replicate 32 0)
+        ]
+  testLoop tests
 
-data Test = Test { dir :: String, expected :: Int32 }
+data Test = Test {path :: String, expected :: V.Vector Register}
 
-testLoop [] = do return ()
-testLoop (path : t) = do
+testLoop [] = do return ExitSuccess
+testLoop ((Test path expected): tail) = do
   let cpu = initCpu
-  mem <- loadTest $ "test/bins/" ++ path
-  printExecution cpu mem
-  testLoop t
+  mem <- loadTest path
+  let finalState = runProgram cpu mem
+--   print finalState
+  check $ regs finalState == expected
+  testLoop tail
+
+isPass :: Result -> Bool
+isPass Success {} = True
+isPass _ = False
+
+check p = do
+  r <- quickCheckResult p
+  unless (isPass r) exitFailure
+
+runProgram state mem =
+  let (s', m') = runInstruction state mem
+   in if halted s'
+        then s'
+        else runProgram s' m'
 
 loadTest :: FilePath -> IO Memory
 loadTest test = do
