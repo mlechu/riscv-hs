@@ -1,5 +1,4 @@
 {-# LANGUAGE BinaryLiterals #-}
-{-# LANGUAGE InstanceSigs #-}
 
 module Cpu where
 
