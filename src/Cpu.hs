@@ -57,17 +57,22 @@ instance Show State where
         (zip [0 :: Int ..] (V.toList regs'))
       ++ "\n"
 
+-- It's OK to have sp (x2) point to 0x0 at initialization, since it
+-- points to "used" memory and grows towards smaller addresses
+-- i.e. sp = 0x0 pushes its first word the "bottom" (highest address) in memory
 initCpu :: State
 initCpu = State 0 (V.replicate 32 0) False
 
 printExecution :: State -> Memory -> IO ()
 printExecution s m = do
-  print $ decodeOp $ Memory.read32 m $ fromIntegral (pc s)
   print s
+  print $ decodeOp $ Memory.read32 m $ fromIntegral (pc s)
   let (s', m') = runInstruction s m
   if halted s'
-    then putStrLn "halted"
-    else printExecution s' m
+    then do
+      print m'
+      putStrLn "halted"
+    else printExecution s' m'
 
 runInstruction :: State -> Memory -> (State, Memory)
 runInstruction s m =
@@ -89,7 +94,7 @@ runInstruction s m =
 
 decodeOp :: Word32 -> Instruction
 decodeOp i =
-  case bitsI 6 0 i of
+  case (bitsI 6 0 i) :: Word32 of
     0b0110111 -> OpLUI (getRd i) (getUImm i)
     0b0010111 -> OpAUIPC (getRd i) (getUImm i)
     0b1101111 -> OpJAL (getRd i) (getJImm i)
@@ -221,6 +226,10 @@ updatePc s (OpBRANCH fn3 rs1 rs2 imm) =
       0b110 -> (<) -- BLTU
       0b111 -> (>=) -- BGEU
       _ -> error "not implemented"
+-- Treat unimplemented instruction or uninitialized memory as halt
 updatePc s (OpUNIMP i) =
+  s {halted = True}
+-- Treat syscall as halt
+updatePc s (OpSYSTEM _ _ _ _) =
   s {halted = True}
 updatePc s _ = s {pc = pc s + 4}

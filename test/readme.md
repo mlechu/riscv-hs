@@ -3,7 +3,7 @@
 I was going to just give instructions on testing, but gave up halfway through and decided to manually dump a bunch of rv binaries in the repo. Here's how the tests got here:
 
 1. follow the instructions here: [homebrew-riscv](https://github.com/riscv-software-src/homebrew-riscv)
-    - you will get a bunch of command-line tools prefixed with `riscv-`
+    - you will get a bunch of command-line tools prefixed with `riscv64-`
 2. `brew install md5sha1sum` apple moment
 3. follow a subset of the instructions here: [riscv-tests](https://github.com/riscv-software-src/riscv-tests) 
    - cd into the folder containing riscv-hs/
