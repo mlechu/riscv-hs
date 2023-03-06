@@ -54,7 +54,7 @@ instance Show State where
               ++ showHex v ""
               ++ " "
         )
-        (zip [1 :: Int ..] (V.toList regs'))
+        (zip [0 :: Int ..] (V.toList regs'))
       ++ "\n"
 
 initCpu :: State
@@ -207,9 +207,11 @@ updatePc :: State -> Instruction -> State
 updatePc s (OpJAL rd imm) =
   s {pc = pc s + imm}
 updatePc s (OpJALR fn3 rd rs1 imm) =
-  s {pc = regget s rs1 + imm}
+  s {pc = regget s rs1
+      - mod (regget s rs1) 1
+      + imm}
 updatePc s (OpBRANCH fn3 rs1 rs2 imm) =
-  s {pc = pc s + if f (regget s rs1) (regget s rs2) then imm else 0}
+  s {pc = pc s + if f (regget s rs1) (regget s rs2) then imm else 4}
   where
     f = case fn3 of
       0b000 -> (==) -- BEQ
