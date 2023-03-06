@@ -20,14 +20,9 @@ data State = State
     halted :: Bool
   }
 
--- data ExecutionEnv = ExecutionEnv
---   { xlen :: Xlen,
---     ecalls :: Map
---   }
-
 -- data Xlen = Xlen32 | Xlen64 | Xlen128
 
--- modify register file. Note x0 is wired to 0, and writes are no-ops.
+-- Modify register file. Note x0 is wired to 0, and writes are no-ops
 regset :: State -> Regcode -> Register -> State
 regset s 0 _ = s
 regset s i v =
@@ -38,6 +33,7 @@ regset s i v =
           (V.singleton (i, v))
     }
 
+-- Retrieve a value from the register file
 regget :: State -> Regcode -> Register
 regget _ 0 = 0
 regget s i = regs s V.! i
@@ -74,6 +70,7 @@ printExecution s m = do
       putStrLn "halted"
     else printExecution s' m'
 
+-- Perform a single instruction on the machine.
 runInstruction :: State -> Memory -> (State, Memory)
 runInstruction s m =
   let i = decodeOp $ Memory.read32 m $ fromIntegral (pc s)
@@ -85,13 +82,7 @@ runInstruction s m =
 -- halt when we see a zero instruction
 -- (this is okay for now; our uninitialized memory will default to 0
 -- and 0 instructions are purposefully undefined)
--- will also probably reject compressed instructions
-
--- decode: int -> ins
--- execute: state -> ins -> state
--- mem: mem -> ins -> mem
--- pc: state -> ins -> state
-
+-- will also probably catch and reject compressed instructions
 decodeOp :: Word32 -> Instruction
 decodeOp i =
   case (bitsI 6 0 i) :: Word32 of
@@ -115,10 +106,11 @@ decodeOp i =
     0b1110011 -> OpSYSTEM (bitsI 31 20 i) (getFn3 i) (getRd i) (getRs1 i)
     _ -> OpUNIMP i
 
+-- Generic set-if-less-than instruction
 slt :: (Ord a) => a -> a -> Register
 slt r1 r2 = if r1 < r2 then 1 else 0
 
--- Decode full instruction, then execute the instruction and update registers
+-- Decode sub-instruction, then update registers
 execute :: State -> Memory -> Instruction -> State
 execute s _ (OpLUI rd imm) = regset s rd imm
 execute s _ (OpAUIPC rd imm) = regset s rd (pc s + imm)
@@ -190,6 +182,7 @@ execute s m (OpSYSTEM fn12 fn3 rd rs1) =
     _ -> error "not implemented"
 execute s m _ = s
 
+-- Perform a single instruction on memory
 updateMemory :: State -> Memory -> Instruction -> Memory
 updateMemory s m (OpSTORE fn3 rs1 rs2 imm) =
   let ea = regget s rs1 + imm

@@ -8,6 +8,7 @@ import Numeric (showHex)
 
 type Regcode = Int
 
+-- ISA breakdown
 data Instruction
   = OpLUI { rd::Regcode, imm::Word32 }
   | OpAUIPC { rd::Regcode, imm::Word32 }
@@ -27,6 +28,8 @@ data Instruction
 -- data InstructionComponent
   -- = InsRd | InsRs1 | InsRs2 | InsImmI | InsImmS | InsImmB | InsImmU | InsImmJ | InsFn3
 
+-- Decoders for various instruction fields and immediate types
+-- as listed in the RISC_V specification
 getRd :: (Integral a, Bits a, Integral b, Bits b) => a -> b
 getRd = bitsI 11 7
 
@@ -73,7 +76,7 @@ getFn3 :: (Integral a, Bits a, Integral b, Bits b) => a -> b
 getFn3 = bitsI 14 12
 
 
--- OCRed from the pdf lol
+-- opcodes OCRed from the pdf lol
 -- 0110111 LUI
 
 -- 0010111 AUIPC

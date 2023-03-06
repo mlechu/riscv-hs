@@ -5,18 +5,20 @@ import Data.Int
 import qualified Data.Vector as V
 import Data.Word
 
+-- mask 3 = 0xfff
 mask :: (Num a, Bits a) => Int -> a
 mask n = shiftL 1 n - 1
 
--- e.g. [32:0] for bits 31 through 0
+-- e.g. [32:0] for bits 31 through 0 of number a
+-- Start must be greater than end
 bits :: (Integral a, Bits a, Integral b) => Int -> Int -> a -> b
 bits start end a =
   if start <= end
     then error "bad args to bits"
     else fromIntegral $ shiftR a end .&. mask (start - end)
 
--- inclusive bounds
--- for now, [0:3] = [3:0] (getting the order wrong produces unhelpful errors)
+-- Inclusive bounds
+-- For now, [0:3] = [3:0] (getting the order wrong produces unhelpful errors)
 bitsI :: (Integral a, Bits a, Integral b) => Int -> Int -> a -> b
 bitsI start = bits (start + 1)
 
@@ -28,14 +30,13 @@ bitI n = bitsI n n
 -- intended for converting endianness
 byteReverse :: (FiniteBits a, Integral a) => a -> a
 byteReverse x =
-  -- foldr (\b out -> out .|. shiftL (shiftR x b .&. 0xff) (bytes - 1 - b)) 0 [0..(bytes - 1)]
   foldr (\(r, l) out -> out .|. shiftL (shiftR x r .&. 0xff) l) 0 shs
   where
     msb = (finiteBitSize x `div` 8) - 1
     shrs = [0,8..msb*8]
     shs = zip shrs [msb*8,msb*8-8..0]
 
--- interpret n as a b-bit signed integer
+-- Interpret n as a b-bit signed integer
 -- b is always less than 32
 signExt :: (Bits a, Integral a) => Int -> a -> a
 signExt b n =
@@ -59,9 +60,11 @@ shRAri x b =
       then complement $ mask $ fromIntegral b
       else 0
 
+-- Functional update of one vector element
 vecset :: V.Vector a -> Int -> a -> V.Vector a
 vecset vec i val = V.update vec (V.singleton (i, val))
 
+-- Used for signed operations and comparison instructions
 signedOp :: (Integral a) => (Int32 -> Int32 -> t) -> a -> a -> t
 signedOp f x y = f (toSigned32 x) (toSigned32 y)
 

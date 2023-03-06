@@ -1,4 +1,24 @@
-## testing
+## Testing
+
+There are three kinds of test here! Figuring out tooling was a bit of a mess.
+
+1. Small C programs compiled to ELF files in [test/c](./c)
+2. SimpleTest.hs, which loads [flat binary files from test/bins](./bins) into the emulator at address 0
+3. Complex test binaries made by the risc-v people. We haven't gotten these to run yet.
+
+### Compiled C programs
+
+See the main readme for instructions on compiling C programs into an understandable format.
+
+### SimpleTest.hs
+
+I've dumped a couple of simple raw binaries into the test/bins directory to exercise the emulator. The SimpleTest test harness iterates through the test programs, executes them and compares the state of the registers to an expected value.
+
+The tests depend on the QuickCheck library  - `cabal install QuickCheck --lib`
+
+The tests can be run with `cabal test`
+
+### Official RISC-V tests
 
 I was going to just give instructions on testing, but gave up halfway through and decided to manually dump a bunch of rv binaries in the repo. Here's how the tests got here:
 
@@ -198,9 +218,3 @@ clean:
 
 ```
 
-### SimpleTest.hs
-I've dumped a couple of simple raw binaries into the test/bins directory to exercise the emulator. The SimpleTest test harness iterates through the test programs, executes them and compares the state of the registers to an expected value.
-
-The tests depend on the QuickCheck library  - `cabal install QuickCheck --lib`
-
-The tests can be run with `cabal test`

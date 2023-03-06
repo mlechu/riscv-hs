@@ -1,10 +1,8 @@
 # riscv-hs
 
-A RISC-V emulator written in Haskell.
+A RISC-V emulator written in Haskell. Currently supports the [RV32I ](https://riscv.org/wp-content/uploads/2017/05/riscv-spec-v2.2.pdf) (32-bit integer) unprivileged ISA.
 
-Currently supports the RV32I unprivileged ISA.
-todo: Probably adding M extension too since we're not hardware engineers and have no excuse
-
+Common extensions such as M (multiplication) and C (compressed two-byte instructions) may be added later.
 
 ## Run the simulator
 
@@ -19,3 +17,13 @@ Alternatively, provide an ELF with `cabal run riscv-hs -- <filepath>`. Not all E
 
 You will need the riscv toolchain installed. For mac, this can be found here: [homebrew-riscv](https://github.com/riscv-software-src/homebrew-riscv)
 
+Some test programs (compiled and not) are found in [test/c](./test/c). You can find out what the compiler does with no multiplication instruction in [test/c/mul](./test/c/mul): `cabal run riscv-hs -- /test/c/mul`
+
+See the [disaster in /test](./test) for other things we tried and other possible program inputs.
+
+## Current implementation quirks
+
+- The program counter starts at 0x0 unless an ELF (with entry point) is provided
+- The stack pointer starts at 0x0 (the first item pushed will appear at the highest available address)
+- ECALL and any undefined instructions according to the RV32I spec are treated as halt instructions 
+  - By their design, any instruction with all bits set to zero is undefined. Accessing uninitialized memory will always produce zero (by our design).
