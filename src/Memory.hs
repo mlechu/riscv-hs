@@ -8,8 +8,6 @@ import Debug.Trace
 import Numeric
 import Util
 
--- TODO: alignment?
-
 type Address = Word32
 
 type MemWord = Word32
@@ -17,10 +15,17 @@ type MemWord = Word32
 data Memory = Memory {mdata :: Map.Map Address MemWord}
 
 instance Show Memory where
-  show m = Map.foldlWithKey'
-    (\out addr val -> out ++ "\n"
-                      ++ showHex addr "" ++ ": "
-                      ++ showHex val "") "" (mdata m)
+  show m =
+    Map.foldlWithKey'
+      ( \out addr val ->
+          out ++ "\n"
+            ++ showHex addr ""
+            ++ ": "
+            ++ replicate (8 - length (showHex val "")) ' '
+            ++ showHex val ""
+      )
+      ""
+      (mdata m)
 
 make :: [(Address, MemWord)] -> Memory
 make l = Memory $ Map.fromList l
@@ -64,6 +69,6 @@ write8 (Memory md) a v =
 
 writeUnaligned :: (Integral b) => Memory -> Address -> b -> Integer -> Memory
 writeUnaligned m a b v =
-  let bvals = map (\bi -> fromIntegral $ shiftR v (8 * bi) .&. 0xff) [0..fromIntegral b-1]
-      addrs = [a..a + fromIntegral b - 1]
-  in (trace (show bvals)) foldl (\m' (addr, val) -> write8 m' addr val) m (zip addrs bvals)
+  let bvals = map (\bi -> fromIntegral $ shiftR v (8 * bi) .&. 0xff) [0 .. fromIntegral b -1]
+      addrs = [a .. a + fromIntegral b - 1]
+   in (trace (show bvals)) foldl (\m' (addr, val) -> write8 m' addr val) m (zip addrs bvals)
